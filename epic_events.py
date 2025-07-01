@@ -1,14 +1,11 @@
 import click
 import jwt
 import sys
-import sentry_sdk
-from common import SECRET_KEY, Base, engine
+from common import Base, engine, SECRET_KEY
 from user import login, create_user, read_users, update_user, delete_user
 from client import create_client, read_clients, update_client, delete_client
 from contract import create_contract, read_contracts, update_contract, delete_contract
 from event import create_event, read_events, update_event, delete_event
-
-sentry_sdk.init(dsn="https://979957b79bc6e1ab3d1dfe35fb70deb0@o4509594182156288.ingest.de.sentry.io/4509594185171024")
 
 
 @click.group()
