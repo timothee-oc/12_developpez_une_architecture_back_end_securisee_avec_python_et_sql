@@ -19,6 +19,7 @@ Il fallait également mettre en place un système d'authentification et de permi
 Un utilisiteur a déjà été créé dans la base de données. Vous pouvez vous connecter avec ses identifiants:
 - username: admin
 - password: admin
+
 Il a le rôle `management` qui lui permet de créer d'autres utilisateurs.
 
 La première chose à faire est de s'authenfier avec :
