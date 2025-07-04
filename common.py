@@ -12,7 +12,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise ValueError("Secret key for login token is not set in .env file")
 
-SENTRY_DSN = os.getenv("DSN")
+SENTRY_DSN = os.getenv("SENTRY_DSN")
 if not SENTRY_DSN:
     raise ValueError("DSN is not set in the .env file")
 sentry_sdk.init(dsn=SENTRY_DSN, send_default_pii=True)
