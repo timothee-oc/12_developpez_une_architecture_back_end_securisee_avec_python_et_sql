@@ -3,6 +3,7 @@ from sqlalchemy import Column, String, Integer, ForeignKey, DateTime
 from common import Base, Session, require_roles
 from contract import Contract
 from user import User
+from tabulate import tabulate
 
 class Event(Base):
     __tablename__ = "events"
@@ -51,9 +52,12 @@ def create_event(ctx, contract_id, name, start, end, location, attendees, notes,
             if not support:
                 click.echo("No user found with given ID")
                 return
-
+            if support.role != "support":
+                click.echo("User does not have role support")
+                return
         session.add(Event(name=name, start=start, end=end, location=location, attendees=attendees, notes=notes, support_id=support_id, contract_id=contract_id))
         session.commit()
+    click.echo("Event successfully created")
 
 @click.command()
 @click.option("--no-support", is_flag=True)
@@ -63,11 +67,19 @@ def read_events(ctx, no_support, mine):
     with Session() as session:
         query = session.query(Event)
         if no_support:
+            if ctx.obj["user_role"] != "management":
+                click.echo("Only management can use no-support option")
+                return
             query = query.filter(Event.support_id.is_(None))
         if mine:
+            if ctx.obj["user_role"] != "support":
+                click.echo("Only support can use mine option")
+                return
             query = query.filter(Event.support_id == ctx.obj["user_id"])
-        for event in query.all():
-            click.echo(event.id, event.name, event.start, event.end, event.location, event.attendees, event.notes, event.contract_id, event.support_id)
+        columns = [column.name for column in Event.__table__.columns]
+        rows = [[getattr(event, col) for col in columns] for event in query.all()]
+        table = tabulate(rows, headers=columns, tablefmt="grid")
+        click.echo(table)
 
 @click.command()
 @click.argument("event_id", type=int)
@@ -81,20 +93,24 @@ def read_events(ctx, no_support, mine):
 @click.pass_context
 @require_roles(["management", "support"])
 def update_event(ctx, event_id, name, start, end, location, attendees, notes, support_id):
+    user_role = ctx.obj["user_role"]
+    if user_role == "management" and any([name, start, end, location, attendees, notes]):
+        click.echo("Management can only update support_id")
+        return
     with Session() as session:
         event = session.query(Event).filter(Event.id==event_id).first()
         if not event:
             click.echo("No event found with given ID")
             return
-        if ctx.obj["user_role"] == "support" and event.support_id != ctx.obj["user_id"]:
-            click.echo("Youe are not in charge of this event")
+        if user_role == "support" and event.support_id != ctx.obj["user_id"]:
+            click.echo("You are not in charge of this event")
             return
         event.name = name or event.name
-        if start and start > event.end:
+        if start and event.end and start > event.end:
             click.echo("Start cannot come after end")
             return
         event.start = start or event.start
-        if end and end < event.start:
+        if end and event.start and end < event.start:
             click.echo("Start cannot come after end")
             return
         event.end = end or event.end
@@ -107,11 +123,15 @@ def update_event(ctx, event_id, name, start, end, location, attendees, notes, su
             if not support:
                 click.echo("No user found with given ID")
                 return
+            if support.role != "support":
+                click.echo("User does not have role support")
+                return
             event.support_id = support_id
         event.location = location or event.location
         event.notes = notes or event.notes
         session.add(event)
         session.commit()
+    click.echo("Event successfully updated")
         
 
 @click.command()
@@ -126,3 +146,4 @@ def delete_event(ctx, event_id):
             return
         session.delete(event)
         session.commit()
+    click.echo("Event successfully deleted")
