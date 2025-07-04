@@ -3,6 +3,7 @@ import click
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from common import Base, Session, require_roles
 from user import User
+from tabulate import tabulate
 
 class Client(Base):
     __tablename__ = "clients"
@@ -27,13 +28,16 @@ def create_client(ctx, name, mail, phone, company):
     with Session() as session:
         session.add(Client(name=name, mail=mail, phone=phone, company=company, contact_id=ctx.obj["user_id"]))
         session.commit()
+    click.echo("Client successfully created")
 
 @click.command()
 def read_clients():
     with Session() as session:
         clients = session.query(Client).all()
-        for client in clients:
-            print(client.id, client.name, client.mail, client.phone, client.company, client.created, client.updated, client.contact_id)
+        columns = [column.name for column in Client.__table__.columns]
+        rows = [[getattr(client, col) for col in columns] for client in clients]
+        table = tabulate(rows, headers=columns, tablefmt="grid")
+        click.echo(table)
 
 @click.command()
 @click.argument("client_id", type=int)
@@ -65,6 +69,7 @@ def update_client(ctx, client_id, name, mail, phone, company, contact_id):
             client.contact_id = contact_id
         session.add(client)
         session.commit()
+    click.echo("Client successfully updated")
 
 @click.command()
 @click.argument("client_id", type=int)
@@ -77,3 +82,4 @@ def delete_client(ctx, client_id):
             click.echo("No client found with given ID")
         session.delete(client)
         session.commit()
+    click.echo("Client successfully deleted")
