@@ -3,6 +3,7 @@ from sqlalchemy import Column, Integer, String
 import click
 import bcrypt
 import jwt
+from tabulate import tabulate
 from common import SECRET_KEY, Base, Session, require_roles
 
 ROLES = ["management", "sales", "support"]
@@ -38,6 +39,7 @@ def login(username: str, password: str):
         )
         with open(".token", "w") as f:
             f.write(token)
+    click.echo("Logged in successfully")
 
 @click.command()
 @click.argument("username")
@@ -56,13 +58,16 @@ def create_user(ctx, username, password, role):
             User(username=username, password=password, role=role)
         )
         session.commit()
+    click.echo("User successfully created")
 
 @click.command()
 def read_users():
     with Session() as session:
         users = session.query(User).all()
-        for user in users:
-            click.echo(f"{user.id}, {user.username}, {user.role}")
+        columns = [column.name for column in User.__table__.columns if column.name != "password"]
+        rows = [[getattr(user, col) for col in columns] for user in users]
+        table = tabulate(rows, headers=columns, tablefmt="grid")
+        click.echo(table)
 
 @click.command()
 @click.argument("user_id", type=int)
@@ -85,6 +90,7 @@ def update_user(ctx, user_id: int, username: str, password: str, role: str):
         user.role = role or user.role
         session.add(user)
         session.commit()
+    click.echo("User successfully updated")
 
 @click.command()
 @click.argument("user_id", type=int)
@@ -98,3 +104,4 @@ def delete_user(ctx, user_id: int):
             return
         session.delete(user)
         session.commit()
+    click.echo("User successfully deleted")
